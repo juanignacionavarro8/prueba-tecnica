@@ -1,0 +1,70 @@
+
+variables:
+  #define user for login to Docker Registry
+  DOCKER_USER: ""
+  #define password for login to Docker Registry. It can define a variable in GitLab CI at repository/group level
+  DOCKER_PASSWORD: ""
+  #define TAG for the new docker image. It can be related to repositories tags using predefined gitlab CI variables.
+  TAG: "latest"
+  # define URL for Docker Registry
+  DOCKER_REGISTRY_URL: ""
+  #define path to index.html file
+  INDEX_PATH: "www/index.html"
+
+stages:
+  - syntax-check
+  - build
+  - push
+
+lint_image:
+  stage: syntax-check
+  tags: 
+    - docker 
+  image: hadolint/hadolint:v2.12.0-alpine
+  script:
+    # Execute Docker lint
+    - find . -name 'Dockerfile*' -exec hadolint --no-fail -f gitlab_codeclimate {} + > hadolint-$(md5sum Dockerfile | cut -d" " -f1).json
+  artifacts:
+    name: "$CI_JOB_NAME artifacts from $CI_PROJECT_NAME on $CI_COMMIT_REF_SLUG"
+    when: always
+    reports:
+      codequality:
+        - "hadolint*"
+    paths:
+      - "hadolint*"
+  rules:
+    - changes:
+        - ${INDEX_PATH}
+
+build_image:
+  stage: build
+  tags: 
+    - shell
+  dependencies: []
+  before_script:
+    - docker login $DOCKER_REGISTRY_URL -u $DOCKER_USER -p $DOCKER_PASSWORD
+  script:
+    - docker build --tag $CI_PROJECT_NAME:${TAG} .
+  needs:
+    - lint_image
+  rules:
+    - changes:
+        - ${INDEX_PATH}
+
+push_image:
+  stage: push 
+  tags: 
+    - shell
+  dependencies: []
+  before_script:
+    - echo 'Logging in to Docker Registry'
+    - docker login $DOCKER_REGISTRY_URL -u $DOCKER_USER -p $DOCKER_PASSWORD
+  script:
+    - docker build --tag $CI_PROJECT_NAME:${TAG} . 
+    - docker tag $CI_PROJECT_NAME:${TAG} ${DOCKER_REGISTRY_URL}/$CI_PROJECT_NAME:${TAG} 
+    - docker push ${DOCKER_REGISTRY_URL}/$CI_PROJECT_NAME:${TAG}
+  needs:
+    - build_image 
+  rules:
+    - changes:
+        - ${INDEX_PATH}

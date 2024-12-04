@@ -1,0 +1,29 @@
+services:
+  db:
+    container_name: db
+    image: postgres:12.0-alpine
+    env_file: ./.env.postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  backend:
+    depends_on:
+      - db
+    image: url_docker_registry/backend_image:backend_image
+    container_name: backend
+    ports:
+      - 8000:8000
+
+  frontend:
+    image: url_docker_registry/frontend_image:frontend_image
+    container_name: frontend
+    ports:
+      - 3000:3000    
+
+    
+volumes:
+  postgres_data:
+  static:
+  media:
