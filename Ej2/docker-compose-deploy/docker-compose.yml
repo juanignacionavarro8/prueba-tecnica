@@ -11,13 +11,13 @@ services:
   backend:
     depends_on:
       - db
-    image: url_docker_registry/backend_image:backend_image
+    image: url_docker_registry/backend_image:backend_image_tag
     container_name: backend
     ports:
       - 8000:8000
 
   frontend:
-    image: url_docker_registry/frontend_image:frontend_image
+    image: url_docker_registry/frontend_image:frontend_image_tag
     container_name: frontend
     ports:
       - 3000:3000    
